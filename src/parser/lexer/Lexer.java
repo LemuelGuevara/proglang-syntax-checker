@@ -48,15 +48,13 @@ public class Lexer {
                 if (currentChar == '\'') {
                     advance();
 
-                    if (currentChar == '\'') {
+                    if (currentChar == '\'')
                         throw new RuntimeException("Invalid character literal: empty character literal");
-                    }
 
                     char charValue = currentChar;
                     advance();
-                    if (currentChar != '\'') {
+                    if (currentChar != '\'')
                         throw new RuntimeException("Invalid character literal: missing closing quote");
-                    }
                     advance();
                     return new Token(TokenType.CHAR_LITERAL, String.valueOf(charValue));
                 }
@@ -91,12 +89,10 @@ public class Lexer {
                 }
 
                 int value = Integer.parseInt(number.toString());
-                if (lastTypeContext.equals(TokenType.TYPE_BYTE) && dataTypeParser.isByte(value)) {
+                if (lastTypeContext.equals(TokenType.TYPE_BYTE) && dataTypeParser.isByte(value))
                     return new Token(TokenType.BYTE_LITERAL, String.valueOf(value));
-                }
-                if (lastTypeContext.equals(TokenType.TYPE_SHORT) && dataTypeParser.isShort(value)) {
+                if (lastTypeContext.equals(TokenType.TYPE_SHORT) && dataTypeParser.isShort(value))
                     return new Token(TokenType.SHORT_LITERAL, String.valueOf(value));
-                }
 
                 return new Token(TokenType.INTEGER_LITERAL, number.toString());
             }
@@ -200,11 +196,10 @@ public class Lexer {
 
     private void advance() {
         position++;
-        if (position >= input.length()) {
+        if (position >= input.length())
             currentChar = '\0';
-        } else {
+        else
             currentChar = input.charAt(position);
-        }
     }
 
     private void skipWhitespace() {
