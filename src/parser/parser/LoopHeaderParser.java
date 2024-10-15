@@ -11,7 +11,6 @@ public class LoopHeaderParser extends Parser {
         super(lexer);
     }
 
-
     private boolean findSemicolon(int semicolonIndex) {
         resetLexer();
 
@@ -75,11 +74,16 @@ public class LoopHeaderParser extends Parser {
         boolean foundRightBrace = false;
 
         while (currentToken.getType() != TokenType.EOF) {
-            if (currentToken.getType().equals(TokenType.KEYWORD_FOR)) foundKeywordFor = true;
-            if (currentToken.getType().equals(TokenType.LEFT_PARENT)) foundLeftParent = true;
-            if (foundLeftParent && currentToken.getType().equals(TokenType.RIGHT_PARENT)) foundRightParent = true;
-            if (currentToken.getType().equals(TokenType.LEFT_BRACE)) foundLeftBrace = true;
-            if (currentToken.getType().equals(TokenType.RIGHT_BRACE)) foundRightBrace = true;
+            if (currentToken.getType().equals(TokenType.KEYWORD_FOR))
+                foundKeywordFor = true;
+            if (currentToken.getType().equals(TokenType.LEFT_PARENT))
+                foundLeftParent = true;
+            if (foundLeftParent && currentToken.getType().equals(TokenType.RIGHT_PARENT))
+                foundRightParent = true;
+            if (currentToken.getType().equals(TokenType.LEFT_BRACE))
+                foundLeftBrace = true;
+            if (currentToken.getType().equals(TokenType.RIGHT_BRACE))
+                foundRightBrace = true;
             analyzeNextToken(currentToken.getType());
         }
 
@@ -94,19 +98,24 @@ public class LoopHeaderParser extends Parser {
         boolean foundIntKeyword = false;
         boolean foundIdentifier = false;
         boolean foundAssign = false;
+        boolean foundIntegerLiteral = false;
 
         while (currentToken.getType() != TokenType.EOF) {
             if (currentToken.getType() == TokenType.SEMICOLON) break;
-
-            if (currentToken.getType().equals(TokenType.TYPE_INT)) foundIntKeyword = true;
+            if (currentToken.getType().equals(TokenType.TYPE_INT))
+                foundIntKeyword = true;
             if (currentToken.getType().equals(TokenType.IDENTIFIER)) {
                 foundIdentifier = true;
                 initializationToken = currentToken;
             }
-            if (currentToken.getType().equals(TokenType.ASSIGN)) foundAssign = true;
+            if (currentToken.getType().equals(TokenType.ASSIGN))
+                foundAssign = true;
+            if (currentToken.getType().equals(TokenType.INTEGER_LITERAL) && foundAssign)
+                foundIntegerLiteral = true;
+
             analyzeNextToken(currentToken.getType());
         }
-        return foundIntKeyword && foundIdentifier && foundAssign;
+        return foundIntKeyword && foundIdentifier && foundAssign && foundIntegerLiteral;
     }
 
     private boolean isCorrectCondition() {
@@ -128,13 +137,18 @@ public class LoopHeaderParser extends Parser {
             }
 
             // Check for integer literals
-            if (currentToken.getType().equals(TokenType.INTEGER_LITERAL)) foundOperand = true;
+            if (currentToken.getType().equals(TokenType.INTEGER_LITERAL))
+                foundOperand = true;
 
             // Check for relational operators
-            if (currentToken.getType().equals(TokenType.GREATER_THAN)) foundGreaterThan = true;
-            if (currentToken.getType().equals(TokenType.GREATER_EQUAL)) foundGreaterEqual = true;
-            if (currentToken.getType().equals(TokenType.LESS_EQUAL)) foundLessEqual = true;
-            if (currentToken.getType().equals(TokenType.LESS_THAN)) foundLessThan = true;
+            if (currentToken.getType().equals(TokenType.GREATER_THAN))
+                foundGreaterThan = true;
+            if (currentToken.getType().equals(TokenType.GREATER_EQUAL))
+                foundGreaterEqual = true;
+            if (currentToken.getType().equals(TokenType.LESS_EQUAL))
+                foundLessEqual = true;
+            if (currentToken.getType().equals(TokenType.LESS_THAN))
+                foundLessThan = true;
 
             analyzeNextToken(currentToken.getType());
 
@@ -153,7 +167,8 @@ public class LoopHeaderParser extends Parser {
 
             while (currentToken.getType() != TokenType.EOF) {
                 if (currentToken.getType() == TokenType.RIGHT_BRACE) break;
-                if (currentToken.getValue().equals(initializationToken.getValue())) matchingInitialization = true;
+                if (currentToken.getValue().equals(initializationToken.getValue()))
+                    matchingInitialization = true;
 
                 if (currentToken.getType().equals(TokenType.INCREMENT)) {
                     foundValidIncrement = true; // Accept ++i
