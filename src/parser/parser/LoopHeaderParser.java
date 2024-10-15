@@ -5,7 +5,7 @@ import parser.lexer.Token;
 import parser.lexer.TokenType;
 
 public class LoopHeaderParser extends Parser {
-    private static Token initializationToken;
+    private Token initializationToken;
 
     public LoopHeaderParser(Lexer lexer) {
         super(lexer);
@@ -29,11 +29,6 @@ public class LoopHeaderParser extends Parser {
         }
 
         return false;
-    }
-
-    private void analyzeNextToken(TokenType expectedType) {
-        if (currentToken.getType() != expectedType) System.out.println("Invalid token type");
-        currentToken = lexer.getNextToken();
     }
 
     private boolean hasCorrectHeaderDelimiters() {
@@ -101,7 +96,9 @@ public class LoopHeaderParser extends Parser {
         boolean foundAssign = false;
 
         while (currentToken.getType() != TokenType.EOF) {
-            if (currentToken.getType().equals(TokenType.KEYWORD_INT)) foundIntKeyword = true;
+            if (currentToken.getType() == TokenType.SEMICOLON) break;
+
+            if (currentToken.getType().equals(TokenType.TYPE_INT)) foundIntKeyword = true;
             if (currentToken.getType().equals(TokenType.IDENTIFIER)) {
                 foundIdentifier = true;
                 initializationToken = currentToken;
@@ -117,12 +114,11 @@ public class LoopHeaderParser extends Parser {
         findSemicolon(1);
 
         boolean foundIdentifier = false;
-        boolean foundOperand = false; // To track if we found an integer literal or another identifier
+        boolean foundOperand = false;
         boolean foundGreaterThan = false;
         boolean foundLessThan = false;
         boolean foundGreaterEqual = false;
         boolean foundLessEqual = false;
-        boolean foundValidMathOperator = false;
 
         while (currentToken.getType() != TokenType.EOF) {
             // Check for identifiers
@@ -140,19 +136,13 @@ public class LoopHeaderParser extends Parser {
             if (currentToken.getType().equals(TokenType.LESS_EQUAL)) foundLessEqual = true;
             if (currentToken.getType().equals(TokenType.LESS_THAN)) foundLessThan = true;
 
-            // Check for mathematical conditions
-            if (currentToken.getType().equals(TokenType.IDENTIFIER) || currentToken.getType().equals(TokenType.INTEGER_LITERAL)) {
-                Token nextToken = lexer.getNextToken();
-                if (nextToken.getType() == TokenType.OPERATOR) foundValidMathOperator = true;
-            }
-
             analyzeNextToken(currentToken.getType());
 
-            // Break the loop when reaching the first semicolon
             if (currentToken.getType() == TokenType.SEMICOLON) break;
         }
+
         return foundIdentifier && foundOperand &&
-                (foundGreaterThan || foundLessThan || foundGreaterEqual || foundLessEqual | foundValidMathOperator);
+                (foundGreaterThan || foundLessThan || foundGreaterEqual || foundLessEqual);
     }
 
     private boolean isCorrectIncrementDecrement() {
@@ -162,7 +152,14 @@ public class LoopHeaderParser extends Parser {
             boolean foundValidDecrement = false;
 
             while (currentToken.getType() != TokenType.EOF) {
+                if (currentToken.getType() == TokenType.RIGHT_BRACE) break;
                 if (currentToken.getValue().equals(initializationToken.getValue())) matchingInitialization = true;
+
+                if (currentToken.getType().equals(TokenType.INCREMENT)) {
+                    foundValidIncrement = true; // Accept ++i
+                } else if (currentToken.getType().equals(TokenType.DECREMENT)) {
+                    foundValidDecrement = true; // Accept --i
+                }
 
                 // Check for valid increment/decrement patterns
                 if (currentToken.getType().equals(TokenType.INCREMENT) || currentToken.getType().equals(TokenType.DECREMENT)) {
