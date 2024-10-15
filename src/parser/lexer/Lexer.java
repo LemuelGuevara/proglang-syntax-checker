@@ -1,23 +1,27 @@
 package parser.lexer;
 
+import parser.parser.DataTypeParser;
+
 import java.util.function.Predicate;
 
 public class Lexer {
     private final String input;
     private int position;
     private char currentChar;
+    private final DataTypeParser dataTypeParser = new DataTypeParser();
+    private TokenType lastTypeContext = null;
 
     public Lexer(String input) {
         this.input = input;
         this.position = 0;
         this.currentChar = input.charAt(position);
-        System.out.println("Lexer initialized with input: " + input); // Debugging line
+        System.out.println("Lexer initialized with input: " + input);
     }
 
     public void reset() {
-        position = 0; // Reset the position to the start
+        position = 0;
         if (!input.isEmpty()) {
-            currentChar = input.charAt(position); // Reset the current character
+            currentChar = input.charAt(position);
         }
     }
 
@@ -29,21 +33,78 @@ public class Lexer {
                 continue;
             }
 
-            // Check for identifiers or keywords
             if (Character.isLetter(currentChar)) {
-                return getLiterals(); // Handle keywords and identifiers
+                Token token = getLiterals();
+                if (token.getType().equals(TokenType.TYPE_BYTE) ||
+                        token.getType().equals(TokenType.TYPE_SHORT) ||
+                        token.getType().equals(TokenType.TYPE_INT) ||
+                        token.getType().equals(TokenType.TYPE_CHAR)) {
+                    lastTypeContext = token.getType();
+                }
+                return token;
+            }
+
+            if (lastTypeContext != null && lastTypeContext.equals(TokenType.TYPE_CHAR)) {
+                if (currentChar == '\'') {
+                    advance();
+
+                    if (currentChar == '\'') {
+                        throw new RuntimeException("Invalid character literal: empty character literal");
+                    }
+
+                    char charValue = currentChar;
+                    advance();
+                    if (currentChar != '\'') {
+                        throw new RuntimeException("Invalid character literal: missing closing quote");
+                    }
+                    advance();
+                    return new Token(TokenType.CHAR_LITERAL, String.valueOf(charValue));
+                }
             }
 
             // Check for digits
             if (Character.isDigit(currentChar)) {
-                String number = readLiteral(Character::isDigit);
-                return new Token(TokenType.INTEGER_LITERAL, number);
+                StringBuilder number = new StringBuilder(readLiteral(Character::isDigit));
+
+                if (currentChar == '.') {
+                    advance();
+
+                    if (Character.isDigit(currentChar)) {
+                        String fractionalPart = readLiteral(Character::isDigit);
+                        number.append('.').append(fractionalPart);
+                        return new Token(TokenType.DOUBLE_LITERAL, number.toString());
+                    } else {
+                        throw new RuntimeException("Invalid double literal: missing fractional part after decimal");
+                    }
+                }
+
+                if (currentChar == 'f' || currentChar == 'F') {
+                    number.append(currentChar);
+                    advance();
+                    return new Token(TokenType.FLOAT_LITERAL, number.toString());
+                }
+
+                if (currentChar == 'l' || currentChar == 'L') {
+                    number.append(currentChar);
+                    advance();
+                    return new Token(TokenType.LONG_LITERAL, number.toString());
+                }
+
+                int value = Integer.parseInt(number.toString());
+                if (lastTypeContext.equals(TokenType.TYPE_BYTE) && dataTypeParser.isByte(value)) {
+                    return new Token(TokenType.BYTE_LITERAL, String.valueOf(value));
+                }
+                if (lastTypeContext.equals(TokenType.TYPE_SHORT) && dataTypeParser.isShort(value)) {
+                    return new Token(TokenType.SHORT_LITERAL, String.valueOf(value));
+                }
+
+                return new Token(TokenType.INTEGER_LITERAL, number.toString());
             }
 
             // Handle delimiters and operators
             switch (currentChar) {
                 case '(':
-                    advance(); // Advance to the next character after returning the token
+                    advance();
                     return new Token(TokenType.LEFT_PARENT, "(");
                 case ')':
                     advance();
@@ -61,20 +122,18 @@ public class Lexer {
                     advance();
                     return new Token(TokenType.COMMA, ",");
                 case '+':
-                    advance(); // Consume the first '+'
+                    advance();
                     if (currentChar == '+') {
-                        advance(); // Consume the second '+'
-                        return new Token(TokenType.INCREMENT, "++"); // Return the '++' token
+                        advance();
+                        return new Token(TokenType.INCREMENT, "++");
                     }
-                    // If the next character is not another '+', return a single '+' token
                     return new Token(TokenType.OPERATOR, "+");
                 case '-':
-                    advance(); // Consume the first '-'
+                    advance();
                     if (currentChar == '-') {
-                        advance(); // Consume the second '-'
-                        return new Token(TokenType.DECREMENT, "--"); // Return the '--' token
+                        advance();
+                        return new Token(TokenType.DECREMENT, "--");
                     }
-                    // If the next character is not another '-', return a single '-' token
                     return new Token(TokenType.OPERATOR, "-");
                 case '*':
                     advance();
@@ -109,14 +168,31 @@ public class Lexer {
 
     // Returns a token for identifiers and keywords
     private Token getLiterals() {
-        String identifier = readLiteral(Character::isLetterOrDigit); // Allow letters and digits
+        String identifier = readLiteral(ch -> Character.isLetterOrDigit(ch) || ch == '.');
         switch (identifier) {
             case "for":
                 return new Token(TokenType.KEYWORD_FOR, identifier);
             case "int":
-                return new Token(TokenType.KEYWORD_INT, identifier);
+                return new Token(TokenType.TYPE_INT, identifier);
+            case "float":
+                return new Token(TokenType.TYPE_FLOAT, identifier);
             case "double":
-                return new Token(TokenType.KEYWORD_DOUBLE, identifier);
+                return new Token(TokenType.TYPE_DOUBLE, identifier);
+            case "byte":
+                return new Token(TokenType.TYPE_BYTE, identifier);
+            case "short":
+                return new Token(TokenType.TYPE_SHORT, identifier);
+            case "long":
+                return new Token(TokenType.TYPE_LONG, identifier);
+            case "boolean":
+                return new Token(TokenType.TYPE_BOOLEAN, identifier);
+            case "true":
+            case "false":
+                return new Token(TokenType.BOOLEAN_LITERAL, identifier);
+            case "char":
+                return new Token(TokenType.TYPE_CHAR, identifier);
+            case "System.out.println":
+                return new Token(TokenType.SYSTEM_PRINTLN_OUT, identifier);
             default:
                 return new Token(TokenType.IDENTIFIER, identifier);
         }
@@ -125,7 +201,7 @@ public class Lexer {
     private void advance() {
         position++;
         if (position >= input.length()) {
-            currentChar = '\0';  // End of input
+            currentChar = '\0';
         } else {
             currentChar = input.charAt(position);
         }
@@ -134,7 +210,7 @@ public class Lexer {
     private void skipWhitespace() {
         if (position < input.length() && Character.isWhitespace(currentChar)) {
             advance();
-            skipWhitespace(); // Recursive call to skip any remaining whitespace
+            skipWhitespace();
         }
     }
 
@@ -142,17 +218,8 @@ public class Lexer {
         StringBuilder result = new StringBuilder();
         while (position < input.length() && condition.test(currentChar)) {
             result.append(currentChar);
-            advance(); // Move to the next character
+            advance();
         }
         return result.toString();
-    }
-
-    // Method to print all tokens for debugging
-    public void printTokens() {
-        Token token = getNextToken();
-        while (token.getType() != TokenType.EOF) {
-            System.out.println(token);
-            token = getNextToken();
-        }
     }
 }
